@@ -1,0 +1,3 @@
+[submodule "navigation_amcl"]
+	path = navigation_amcl
+	url = https://github.com/ysuga/navigation_amcl.git
