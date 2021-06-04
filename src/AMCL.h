@@ -7,5 +7,7 @@ struct AMCL {
   std::shared_ptr<map_t> map;
   std::shared_ptr<amcl::AMCLLaser> laser;
   std::shared_ptr<amcl::AMCLOdom> odom;
+  juiz::TimedPose3D oldPose;
+  juiz::TimedPose3D estimatedPose;
 };
 
