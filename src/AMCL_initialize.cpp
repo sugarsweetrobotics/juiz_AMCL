@@ -93,8 +93,8 @@ JUIZ_OPERATION  void* AMCL_initialize() {
        }
 
        // レーザーの初期化
-       auto laserconfig = argToLaserConfig(arg);
-       if (!(container.laser = std::shared_ptr<amcl::AMCLLaser>(initLaser(laserconfig, container.map.get())))) {
+       container.laserConfig = argToLaserConfig(arg);
+       if (!(container.laser = std::shared_ptr<amcl::AMCLLaser>(initLaser(container.laserConfig, container.map.get())))) {
 	 return Value::error(logger::error("AMCL_initialize failed. initLaser failed."));
        }
 

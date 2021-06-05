@@ -9,5 +9,6 @@ struct AMCL {
   std::shared_ptr<amcl::AMCLOdom> odom;
   juiz::TimedPose3D oldPose;
   juiz::TimedPose3D estimatedPose;
+  laser_config laserConfig;
 };
 
