@@ -1,3 +1,6 @@
+#include <optional>
+#include <vector>
+
 #include "amcl_wrapper.h"
 
 
@@ -197,3 +200,32 @@ amcl::AMCLOdom* initOdom(const odom_config& config) {
   return odom;
 }
 
+
+
+
+std::optional<std::tuple<double,double,double>> estimatePose(pf_t* pf) {
+  double max_weight = 0.0;
+  int max_weight_count = -1;
+  std::vector<amcl_hyp_t> hyps;
+  const long len = pf->sets[pf->current_set].cluster_count;
+  for(int i = 0;i < len;++i) {
+    amcl_hyp_t hyp;
+    if (!pf_get_cluster_stats(pf, i, &hyp.weight, &hyp.pf_pose_mean, &hyp.pf_pose_cov)) {
+      return std::nullopt;
+    }
+    if (max_weight < hyp.weight) {
+      max_weight = hyp.weight;
+      max_weight_count = i;
+    }
+    hyps.emplace_back(hyp);
+  }
+
+  if (max_weight < 0.0) {
+    // std::cout << " - max weight is negative... failed." << std::endl;
+    return std::nullopt;
+  }
+  //  estimatedPose = convertPose(
+  return std::make_tuple(hyps[max_weight_count].pf_pose_mean.v[0],
+			 hyps[max_weight_count].pf_pose_mean.v[1],
+			 hyps[max_weight_count].pf_pose_mean.v[2]);
+}

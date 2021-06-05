@@ -5,19 +5,7 @@
 #include "AMCL.h"
 
 
-//#if WIN32
-#ifdef min
 
-#define MIN(x, y) ((x > y) ? (y) : (x))
-#define MAX(x, y) ((x > y) ? (x) : (y))
-
-#else
-
-#define MIN(x, y) std::min((x), (y))
-#define MAX(x, y) std::max((x), (y))
-
-#endif // min
-//#endif // WIN32
 
 using namespace juiz;
 
@@ -59,6 +47,55 @@ pf_vector_t diff(const juiz::Pose3D& x0, const juiz::Pose3D& x1) {
   auto ryp1 = juiz::QuaternionToEulerXYZ(x1.orientation);  
   delta.v[2] = -angular_diff(ryp0.z, ryp1.z);
   return delta;
+}
+
+amcl::AMCLLaserData* toLaserData(amcl::AMCLLaser* laser, const laser_config& config, const Value& v, const juiz::Pose3D& offset);
+
+JUIZ_OPERATION  void* AMCL_resample() {
+  return containerOperationFactory<AMCL>
+    (
+     {
+       {"typeName", "resample"},
+       {"defaultArg", {
+	   {"scan", { /// Spec for URG04LXUG01
+	       {"ranges", Value::list()},
+	       {"maxRange", 5.0},
+	       {"maxAngle", 270.0/2/180*M_PI},
+	       {"minAngle", -270.0/2/180*M_PI},
+	       {"resAngle", 270.0/180*M_PI/684}	       	       
+	     }},
+	   {"offset", {
+	       {"position", {
+		   {"x", 0.},
+		   {"y", 0.},
+		   {"z", 0.}
+		 }},
+	       {"orientation", {
+		   {"x", 0.},
+		   {"y", 0.},
+		   {"z", 0.},
+		   {"w", 1.0}		   
+		 }}
+	     }}
+	 }}
+     },
+     [](auto& container, auto arg)
+     {
+       logger::trace("AMCL_setMap({}) called", arg);
+       auto offset = toPose3D(arg["offset"]);
+       auto laserData = toLaserData(container.laser.get(), container.laserConfig, arg["scan"], offset);
+       container.laser->UpdateSensor(container.pf.get(), (amcl::AMCLSensorData*)laserData);
+       pf_update_resample(container.pf.get());
+       auto estimated = estimatePose(container.pf.get());
+       if (estimated) {
+	 container.estimatedPose.tm.sec = Value::doubleValue(arg["scan"]["tm"]["sec"]);
+	 container.estimatedPose.tm.nsec = Value::doubleValue(arg["scan"]["tm"]["nsec"]);
+	 container.estimatedPose.pose.position.x = std::get<0>(estimated.value());
+	 container.estimatedPose.pose.position.y = std::get<1>(estimated.value());
+	 container.estimatedPose.pose.orientation = juiz::EulerXYZToQuaternion({0., 0., std::get<2>(estimated.value())});
+       }
+       return arg;
+     });
 }
 
 
@@ -122,43 +159,4 @@ amcl::AMCLLaserData* toLaserData(amcl::AMCLLaser* laser, const laser_config& con
 }
 
 
-
-JUIZ_OPERATION  void* AMCL_resample() {
-  return containerOperationFactory<AMCL>
-    (
-     {
-       {"typeName", "resample"},
-       {"defaultArg", {
-	   {"scan", { /// Spec for URG04LXUG01
-	       {"ranges", Value::list()},
-	       {"maxRange", 5.0},
-	       {"maxAngle", 270.0/2/180*M_PI},
-	       {"minAngle", -270.0/2/180*M_PI},
-	       {"resAngle", 270.0/180*M_PI/684}	       	       
-	     }},
-	   {"offset", {
-	       {"position", {
-		   {"x", 0.},
-		   {"y", 0.},
-		   {"z", 0.}
-		 }},
-	       {"orientation", {
-		   {"x", 0.},
-		   {"y", 0.},
-		   {"z", 0.},
-		   {"w", 1.0}		   
-		 }}
-	     }}
-	 }}
-     },
-     [](auto& container, auto arg)
-     {
-       logger::trace("AMCL_setMap({}) called", arg);
-       auto offset = toPose3D(arg["offset"]);
-       auto laserData = toLaserData(container.laser.get(), container.laserConfig, arg, offset);
-       container.laser->UpdateSensor(container.pf.get(), (amcl::AMCLSensorData*)laserData);
-       pf_update_resample(container.pf.get());
-       return arg;
-     });
-}
 

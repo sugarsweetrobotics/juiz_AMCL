@@ -55,3 +55,30 @@ pf_t* initPF(const pf_config& config, map_t* map);
 amcl::AMCLLaser* initLaser(const laser_config& config, map_t* map);
 amcl::AMCLOdom* initOdom(const odom_config& config);
 
+//#if WIN32
+#ifdef min
+
+#define MIN(x, y) ((x > y) ? (y) : (x))
+#define MAX(x, y) ((x > y) ? (x) : (y))
+
+#else
+
+#define MIN(x, y) std::min((x), (y))
+#define MAX(x, y) std::max((x), (y))
+
+#endif // min
+//#endif // WIN32
+
+// Pose hypothesis
+typedef struct
+{
+  // Total weight (weights sum to 1)
+  double weight;
+  // Mean of pose esimate
+  pf_vector_t pf_pose_mean;
+  // Covariance of pose estimate
+  pf_matrix_t pf_pose_cov;
+} amcl_hyp_t;
+
+
+std::optional<std::tuple<double,double,double>> estimatePose(pf_t* pf);
